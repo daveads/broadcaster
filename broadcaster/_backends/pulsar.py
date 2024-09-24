@@ -22,20 +22,16 @@ class PulsarBackend(BroadcastBackend):
             self._client = await asyncio.to_thread(
                 pulsar.Client,
                 self._service_url,
-                connection_timeout_ms=30000,  # Increase timeout to 30 seconds
-                operation_timeout_seconds=30  # Increase operation timeout
             )
             self._producer = await asyncio.to_thread(
                 self._client.create_producer,
                 "broadcast",
-                send_timeout_ms=30000,
             )
             self._consumer = await asyncio.to_thread(
                 self._client.subscribe,
                 "broadcast",
                 subscription_name="broadcast_subscription",
                 consumer_type=pulsar.ConsumerType.Shared,
-                receiver_queue_size=10000
             )
             logging.info("Successfully connected to Pulsar broker")
         except pulsar.ConnectError as e:
