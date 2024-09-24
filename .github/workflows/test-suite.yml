@@ -55,8 +55,8 @@ jobs:
           - 8080:8080
         options: >-
           --health-cmd "bin/pulsar-admin brokers healthcheck"
-          --health-interval 10s
-          --health-timeout 5s
+          --health-interval 30s
+          --health-timeout 120s
           --health-retries 5
         volumes:
           - pulsardata:/pulsar/data
