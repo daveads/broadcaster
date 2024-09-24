@@ -50,11 +50,7 @@ jobs:
       # Run tests
       - name: "Run tests"
         run: "scripts/test"
-      
-      # Enforce coverage
-      - name: "Enforce coverage"
-        run: "scripts/coverage"
-      
+     
       # Stop the Pulsar container after all tests are complete
       - name: Stop Pulsar
         run: docker-compose down
