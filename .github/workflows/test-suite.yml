@@ -53,6 +53,11 @@ jobs:
         ports:
           - 6650:6650
           - 8080:8080
+        options: >-
+          --health-cmd "bin/pulsar-admin brokers healthcheck"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         volumes:
           - pulsardata:/pulsar/data
           - pulsarconf:/pulsar/conf
