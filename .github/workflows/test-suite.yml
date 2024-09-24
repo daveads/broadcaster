@@ -3,9 +3,9 @@ name: Test Suite
 
 on:
   push:
-    branches: ["master"]
+    branches: ["failing_test"]
   pull_request:
-    branches: ["master"]
+    branches: ["failing_test"]
   workflow_dispatch:
 
 jobs:
