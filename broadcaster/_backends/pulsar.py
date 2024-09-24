@@ -2,7 +2,7 @@ import asyncio
 import logging
 import typing
 from urllib.parse import urlparse
-import pulsar
+from pulsar import Client, ProducerConfiguration, ConsumerConfiguration, CompressionType, ConsumerType, ProducerAccessMode, PulsarException
 from broadcaster._base import Event
 from .base import BroadcastBackend
 
@@ -20,26 +20,33 @@ class PulsarBackend(BroadcastBackend):
         try:
             logging.info(f"Connecting to Pulsar broker at {self._service_url}")
             self._client = await asyncio.to_thread(
-                pulsar.Client,
+                Client,
                 self._service_url,
-                connection_timeout_ms=30000,  # Increase timeout to 30 seconds
                 operation_timeout_seconds=30  # Increase operation timeout
             )
+
+            producer_conf = ProducerConfiguration()
+            producer_conf.send_timeout_millis(30000)  # Set send timeout
+
             self._producer = await asyncio.to_thread(
                 self._client.create_producer,
                 "broadcast",
-                send_timeout_ms=30000,
+                producer_conf
             )
+
+            consumer_conf = ConsumerConfiguration()
+            consumer_conf.consumer_type(ConsumerType.Shared)
+            
             self._consumer = await asyncio.to_thread(
                 self._client.subscribe,
                 "broadcast",
                 subscription_name="broadcast_subscription",
-                consumer_type=pulsar.ConsumerType.Shared,
-                receiver_queue_size=10000
+                consumer_type=ConsumerType.Shared,
+                consumer_conf=consumer_conf
             )
             logging.info("Successfully connected to Pulsar broker")
-        except pulsar.ConnectError as e:
-            logging.error(f"Failed to connect to Pulsar broker: {e}")
+        except PulsarException as e:
+            logging.error(f"Pulsar error while connecting: {e}")
             raise
         except Exception as e:
             logging.error(f"Unexpected error while connecting to Pulsar: {e}")
@@ -64,7 +71,11 @@ class PulsarBackend(BroadcastBackend):
 
     async def publish(self, channel: str, message: typing.Any) -> None:
         encoded_message = f"{channel}:{message}".encode("utf-8")
-        await asyncio.to_thread(self._producer.send, encoded_message)
+        
+        def send_callback(producer, msg):
+            logging.info(f"Message sent: {msg}")
+
+        await asyncio.to_thread(self._producer.send_async, encoded_message, send_callback)
 
     async def next_published(self) -> Event:
         while True:
