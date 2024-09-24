@@ -48,20 +48,22 @@ jobs:
           POSTGRES_USER: postgres
         ports:
           - 5432:5432
-      pulsar:
-        image: apachepulsar/pulsar:3.3.1
-        ports:
-          - 6650:6650
-          - 8080:8080
-        volumes:
-          - pulsardata:/pulsar/data
-          - pulsarconf:/pulsar/conf
+
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v2"
         with:
           python-version: "${{ matrix.python-version }}"
 
+      # Install Docker Compose if it's not available by default
+      - name: Set up Docker Compose
+        run: sudo apt-get install docker-compose -y
+
+      # Start Pulsar using Docker Compose
+      - name: Start Pulsar
+        run: docker-compose up -d pulsar
+
+      
       - name: Wait for Pulsar
         run: |
           timeout 300 bash -c '
@@ -82,3 +84,7 @@ jobs:
         run: "scripts/test"
       - name: "Enforce coverage"
         run: "scripts/coverage"
+
+      # Stop the Pulsar container after all tests are complete
+      - name: Stop Pulsar
+        run: docker-compose down
