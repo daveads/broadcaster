@@ -69,9 +69,12 @@ class PulsarBackend(BroadcastBackend):
                 channel, content = msg.data().decode("utf-8").split(":", 1)
                 await anyio.to_thread.run_sync(self._consumer.acknowledge, msg)
                 return Event(channel=channel, message=content)
+
             except anyio.get_cancelled_exc_class():
+                # cancellation
                 logging.info("next_published task is being cancelled")
                 raise
+
             except Exception as e:
                 logging.error(f"Error in next_published: {e}")
-                raise               raise
+                raise
