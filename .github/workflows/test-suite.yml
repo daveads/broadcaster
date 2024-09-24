@@ -53,11 +53,6 @@ jobs:
         ports:
           - 6650:6650
           - 8080:8080
-        options: >-
-          --health-cmd "bin/pulsar-admin brokers healthcheck"
-          --health-interval 180s
-          --health-timeout 120s
-          --health-retries 5
         volumes:
           - pulsardata:/pulsar/data
           - pulsarconf:/pulsar/conf
@@ -66,6 +61,16 @@ jobs:
       - uses: "actions/setup-python@v2"
         with:
           python-version: "${{ matrix.python-version }}"
+
+      - name: Wait for Pulsar
+        run: |
+          timeout 300 bash -c '
+          until curl -s http://localhost:8080/admin/v2/brokers/health | grep "OK"; do
+            echo "Waiting for Pulsar to be ready..."
+            sleep 5
+          done
+          '
+
       - name: "Install dependencies"
         run: "scripts/install"
       # - name: "Run linting checks"
