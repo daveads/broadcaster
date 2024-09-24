@@ -1,0 +1,61 @@
+name: Test Suite
+on:
+  push:
+    branches: ["failing_test"]
+  pull_request:
+    branches: ["failing_test"]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      
+      # Install Docker Compose if it's not available by default
+      - name: Set up Docker Compose
+        run: sudo apt-get install docker-compose -y
+
+      # Start Pulsar using Docker Compose
+      - name: Start Pulsar
+        run: docker-compose up -d pulsar
+
+      # Wait for Pulsar to be ready
+      - name: Wait for Pulsar
+        run: |
+          timeout 300 bash -c '
+          until curl -s http://localhost:8080/admin/v2/brokers/healthcheck; do
+            echo "Waiting for Pulsar to be ready..."
+            sleep 5
+          done
+          echo "Pulsar is ready"
+          '
+
+      # Install dependencies
+      - name: "Install dependencies"
+        run: "scripts/install"
+      
+      # Build the package & docs
+      - name: "Build package & docs"
+        run: "scripts/build"
+      
+      # Run tests
+      - name: "Run tests"
+        run: "scripts/test"
+      
+      # Enforce coverage
+      - name: "Enforce coverage"
+        run: "scripts/coverage"
+      
+      # Stop the Pulsar container after all tests are complete
+      - name: Stop Pulsar
+        run: docker-compose down
+
