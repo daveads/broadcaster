@@ -17,18 +17,26 @@ class PulsarBackend(BroadcastBackend):
         self._producer = None
         self._consumer = None
 
+        self._client_config = pulsar.ClientOptions(
+            connection_timeout_ms=30000,  # Increase timeout to 30 seconds
+            operation_timeout_seconds=30  # Increase operation timeout
+        )
+
     async def connect(self) -> None:
         try:
             logging.info("Connecting to brokers")
             self._client = await asyncio.to_thread(pulsar.Client, self._service_url)
+
             self._producer = await asyncio.to_thread(
-                self._client.create_producer, "broadcast"
+                self._client.create_producer, "broadcast",
+                send_timeout_ms=30000,
             )
             self._consumer = await asyncio.to_thread(
                 self._client.subscribe,
                 "broadcast",
                 subscription_name="broadcast_subscription",
                 consumer_type=pulsar.ConsumerType.Shared,
+                receiver_queue_size=10000
             )
             logging.info("Successfully connected to brokers")
         except Exception as e:
