@@ -65,10 +65,11 @@ jobs:
       - name: Wait for Pulsar
         run: |
           timeout 300 bash -c '
-          until curl -s http://localhost:8080/admin/v2/brokers/health | grep "OK"; do
+          until curl -s http://localhost:8080/admin/v2/brokers/healthcheck; do
             echo "Waiting for Pulsar to be ready..."
             sleep 5
           done
+          echo "pulsar is ready"
           '
 
       - name: "Install dependencies"
