@@ -74,4 +74,4 @@ class PulsarBackend(BroadcastBackend):
                 raise
             except Exception as e:
                 logging.error(f"Error in next_published: {e}")
-                raise
+                raise               raise
