@@ -2,7 +2,7 @@ import pytest
 
 from broadcaster import Broadcast
 
-"""
+
 @pytest.mark.asyncio
 async def test_memory():
     async with Broadcast("memory://") as broadcast:
@@ -21,7 +21,6 @@ async def test_redis():
             event = await subscriber.get()
             assert event.channel == "chatroom"
             assert event.message == "hello"
-"""
 
 ## pulsar test 
 @pytest.mark.asyncio
