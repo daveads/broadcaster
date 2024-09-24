@@ -1,10 +1,11 @@
+import anyio
 import logging
 import typing
 from urllib.parse import urlparse
 import pulsar
-import anyio
 from broadcaster._base import Event
 from .base import BroadcastBackend
+
 
 class PulsarBackend(BroadcastBackend):
     def __init__(self, url: str):
@@ -18,28 +19,22 @@ class PulsarBackend(BroadcastBackend):
 
     async def connect(self) -> None:
         try:
-            logging.info(f"Connecting to Pulsar broker at {self._service_url}")
-            self._client = await anyio.to_thread.run_sync(
-                pulsar.Client,
-                self._service_url,
-            )
+            logging.info("Connecting to brokers")
+            self._client = await anyio.to_thread.run_sync(lambda: pulsar.Client(self._service_url))
             self._producer = await anyio.to_thread.run_sync(
-                self._client.create_producer,
-                "broadcast",
+                lambda: self._client.create_producer("broadcast")
             )
             self._consumer = await anyio.to_thread.run_sync(
-                self._client.subscribe,
-                "broadcast",
-                subscription_name="broadcast_subscription",
-                consumer_type=pulsar.ConsumerType.Shared,
+                lambda: self._client.subscribe(
+                    "broadcast",
+                    subscription_name="broadcast_subscription",
+                    consumer_type=pulsar.ConsumerType.Shared,
+                )
             )
-            logging.info("Successfully connected to Pulsar broker")
-        except pulsar.ConnectError as e:
-            logging.error(f"Failed to connect to Pulsar broker: {e}")
-            raise
+            logging.info("Successfully connected to brokers")
         except Exception as e:
-            logging.error(f"Unexpected error while connecting to Pulsar: {e}")
-            raise
+            logging.error(e)
+            raise e
 
     async def disconnect(self) -> None:
         if self._producer:
@@ -60,14 +55,14 @@ class PulsarBackend(BroadcastBackend):
 
     async def publish(self, channel: str, message: typing.Any) -> None:
         encoded_message = f"{channel}:{message}".encode("utf-8")
-        await anyio.to_thread.run_sync(self._producer.send, encoded_message)
+        await anyio.to_thread.run_sync(lambda: self._producer.send(encoded_message))
 
     async def next_published(self) -> Event:
         while True:
             try:
                 msg = await anyio.to_thread.run_sync(self._consumer.receive)
                 channel, content = msg.data().decode("utf-8").split(":", 1)
-                await anyio.to_thread.run_sync(self._consumer.acknowledge, msg)
+                await anyio.to_thread.run_sync(lambda: self._consumer.acknowledge(msg))
                 return Event(channel=channel, message=content)
 
             except anyio.get_cancelled_exc_class():
@@ -78,3 +73,4 @@ class PulsarBackend(BroadcastBackend):
             except Exception as e:
                 logging.error(f"Error in next_published: {e}")
                 raise
+
