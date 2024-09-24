@@ -1,22 +1,18 @@
 ---
 name: Test Suite
-
 on:
   push:
     branches: ["failing_test"]
   pull_request:
     branches: ["failing_test"]
   workflow_dispatch:
-
 jobs:
   tests:
     name: "Python ${{ matrix.python-version }}"
     runs-on: "ubuntu-latest"
-
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
-
     services:
       zookeeper:
         image: confluentinc/cp-zookeeper
@@ -52,7 +48,14 @@ jobs:
           POSTGRES_USER: postgres
         ports:
           - 5432:5432
-
+      pulsar:
+        image: apachepulsar/pulsar:3.3.1
+        ports:
+          - 6650:6650
+          - 8080:8080
+        volumes:
+          - pulsardata:/pulsar/data
+          - pulsarconf:/pulsar/conf
     steps:
       - uses: "actions/checkout@v2"
       - uses: "actions/setup-python@v2"
