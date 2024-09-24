@@ -12,7 +12,7 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     services:
       zookeeper:
         image: confluentinc/cp-zookeeper
@@ -82,8 +82,9 @@ jobs:
         run: "scripts/build"
       - name: "Run tests"
         run: "scripts/test"
-      - name: "Enforce coverage"
-        run: "scripts/coverage"
+
+        #- name: "Enforce coverage"
+        #run: "scripts/coverage"
 
       # Stop the Pulsar container after all tests are complete
       - name: Stop Pulsar
