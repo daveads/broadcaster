@@ -33,7 +33,7 @@ async def test_pulsar():
             assert event.channel == "chatroom"
             assert event.message == "hello"
 
-"""
+
 @pytest.mark.asyncio
 async def test_postgres():
     async with Broadcast(
@@ -44,10 +44,9 @@ async def test_postgres():
             event = await subscriber.get()
             assert event.channel == "chatroom"
             assert event.message == "hello"
-"""
 
-#@pytest.mark.skip("Deadlock on `next_published`")
-"""
+
+@pytest.mark.skip("Deadlock on `next_published`")
 @pytest.mark.asyncio
 async def test_kafka():
     async with Broadcast("kafka://localhost:9092") as broadcast:
@@ -56,4 +55,3 @@ async def test_kafka():
             event = await subscriber.get()
             assert event.channel == "chatroom"
             assert event.message == "hello"
-"""

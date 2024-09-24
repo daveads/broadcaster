@@ -20,7 +20,9 @@ class PulsarBackend(BroadcastBackend):
     async def connect(self) -> None:
         try:
             logging.info("Connecting to brokers")
-            self._client = await anyio.to_thread.run_sync(lambda: pulsar.Client(self._service_url))
+            self._client = await anyio.to_thread.run_sync(
+                lambda: pulsar.Client(self._service_url)
+            )
             self._producer = await anyio.to_thread.run_sync(
                 lambda: self._client.create_producer("broadcast")
             )
@@ -73,4 +75,3 @@ class PulsarBackend(BroadcastBackend):
             except Exception as e:
                 logging.error(f"Error in next_published: {e}")
                 raise
-
