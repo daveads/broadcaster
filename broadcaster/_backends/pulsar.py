@@ -6,7 +6,6 @@ import pulsar
 from broadcaster._base import Event
 from .base import BroadcastBackend
 
-
 class PulsarBackend(BroadcastBackend):
     def __init__(self, url: str):
         parsed_url = urlparse(url)
@@ -17,18 +16,18 @@ class PulsarBackend(BroadcastBackend):
         self._producer = None
         self._consumer = None
 
-        self._client_config = pulsar.ClientOptions(
-            connection_timeout_ms=30000,  # Increase timeout to 30 seconds
-            operation_timeout_seconds=30  # Increase operation timeout
-        )
-
     async def connect(self) -> None:
         try:
-            logging.info("Connecting to brokers")
-            self._client = await asyncio.to_thread(pulsar.Client, self._service_url)
-
+            logging.info(f"Connecting to Pulsar broker at {self._service_url}")
+            self._client = await asyncio.to_thread(
+                pulsar.Client,
+                self._service_url,
+                connection_timeout_ms=30000,  # Increase timeout to 30 seconds
+                operation_timeout_seconds=30  # Increase operation timeout
+            )
             self._producer = await asyncio.to_thread(
-                self._client.create_producer, "broadcast",
+                self._client.create_producer,
+                "broadcast",
                 send_timeout_ms=30000,
             )
             self._consumer = await asyncio.to_thread(
@@ -38,10 +37,13 @@ class PulsarBackend(BroadcastBackend):
                 consumer_type=pulsar.ConsumerType.Shared,
                 receiver_queue_size=10000
             )
-            logging.info("Successfully connected to brokers")
+            logging.info("Successfully connected to Pulsar broker")
+        except pulsar.ConnectError as e:
+            logging.error(f"Failed to connect to Pulsar broker: {e}")
+            raise
         except Exception as e:
-            logging.error(e)
-            raise e
+            logging.error(f"Unexpected error while connecting to Pulsar: {e}")
+            raise
 
     async def disconnect(self) -> None:
         if self._producer:
@@ -71,12 +73,9 @@ class PulsarBackend(BroadcastBackend):
                 channel, content = msg.data().decode("utf-8").split(":", 1)
                 await asyncio.to_thread(self._consumer.acknowledge, msg)
                 return Event(channel=channel, message=content)
-
             except asyncio.CancelledError:
-                # cancellation
                 logging.info("next_published task is being cancelled")
                 raise
-
             except Exception as e:
                 logging.error(f"Error in next_published: {e}")
                 raise
