@@ -44,7 +44,7 @@ async def test_postgres():
             assert event.channel == "chatroom"
             assert event.message == "hello"
 
-
+"""
 @pytest.mark.skip("Deadlock on `next_published`")
 @pytest.mark.asyncio
 async def test_kafka():
@@ -54,3 +54,4 @@ async def test_kafka():
             event = await subscriber.get()
             assert event.channel == "chatroom"
             assert event.message == "hello"
+"""
