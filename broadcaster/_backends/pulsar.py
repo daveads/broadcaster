@@ -31,6 +31,7 @@ class PulsarBackend(BroadcastBackend):
             raise e
 
     async def disconnect(self) -> None:
+        await anyio.sleep(1)  # Add a small delay before disconnecting
         for producer in self._producers.values():
             await anyio.to_thread.run_sync(producer.close)
         for consumer in self._consumers.values():
