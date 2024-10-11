@@ -79,15 +79,15 @@ class PulsarBackend(BroadcastBackend):
 
 
     async def unsubscribe(self, channel: str) -> None:
-    if channel in self._consumers:
-        consumer = self._consumers.pop(channel)
-        try:
-            await anyio.to_thread.run_sync(consumer.close)
-        except ValueError:
-            logger.warning(f"Consumer for channel {channel} was not in the client's list")
-        except Exception as e:
-            logger.error(f"Error closing consumer for channel {channel}: {e}")
-        logger.info(f"Unsubscribed from channel: {channel}")
+        if channel in self._consumers:
+            consumer = self._consumers.pop(channel)
+            try:
+                await anyio.to_thread.run_sync(consumer.close)
+            except ValueError:
+                logger.warning(f"Consumer for channel {channel} was not in the client's list")
+            except Exception as e:
+                logger.error(f"Error closing consumer for channel {channel}: {e}")
+            logger.info(f"Unsubscribed from channel: {channel}")
 
 
     async def publish(self, channel: str, message: typing.Any) -> None:
