@@ -42,19 +42,19 @@ class PulsarBackend(BroadcastBackend):
         
         # Prepare coroutines for closing producers and consumers
         close_coros = [
-            self._close_producer(producer)
+            anyio.to_thread.run_sync(producer.close)
             for producer in self._producers.values()
         ] + [
-            self._close_consumer(consumer)
+            anyio.to_thread.run_sync(consumer.close)
             for consumer in self._consumers.values()
         ]
         
+        # Add client close coroutine if client exists
+        if self._client:
+            close_coros.append(anyio.to_thread.run_sync(self._client.close))
+        
         # Execute all close operations concurrently
         await asyncio.gather(*close_coros, return_exceptions=True)
-        
-        # Close the client
-        if self._client:
-            await anyio.to_thread.run_sync(self._client.close)
         
         # Clear all containers
         self._producers.clear()
@@ -63,18 +63,6 @@ class PulsarBackend(BroadcastBackend):
         self._client = None
         
         logger.info("Disconnected from Pulsar")
-
-    async def _close_producer(self, producer):
-        try:
-            await anyio.to_thread.run_sync(producer.close)
-        except Exception as e:
-            logger.error(f"Error closing producer: {e}")
-
-    async def _close_consumer(self, consumer):
-        try:
-            await anyio.to_thread.run_sync(consumer.close)
-        except Exception as e:
-            logger.error(f"Error closing consumer: {e}")
 
     async def subscribe(self, channel: str) -> None:
         if channel not in self._consumers:
@@ -91,12 +79,11 @@ class PulsarBackend(BroadcastBackend):
 
     async def unsubscribe(self, channel: str) -> None:
         if channel in self._consumers:
-            if channel in self._receiver_tasks:
-                self._receiver_tasks[channel].cancel()
-                await self._receiver_tasks[channel]
-                del self._receiver_tasks[channel]
+            self._receiver_tasks[channel].cancel()
+            await self._receiver_tasks[channel]
+            del self._receiver_tasks[channel]
             consumer = self._consumers.pop(channel)
-            await self._close_consumer(consumer)
+            await anyio.to_thread.run_sync(consumer.close)
             logger.info(f"Unsubscribed from channel: {channel}")
 
     async def publish(self, channel: str, message: typing.Any) -> None:
@@ -115,18 +102,14 @@ class PulsarBackend(BroadcastBackend):
         try:
             while True:
                 try:
-                    msg = await anyio.to_thread.run_sync(consumer.receive, timeout_millis=1000)
-                    if msg:
-                        content = msg.data().decode("utf-8")
-                        await anyio.to_thread.run_sync(consumer.acknowledge, msg)
-                        await self._shared_queue.put(Event(channel=channel, message=content))
-                        logger.info(f"Received message from channel {channel}: {content}")
-                except pulsar.Timeout:
-                    # No message received, continue
-                    continue
+                    msg = await anyio.to_thread.run_sync(consumer.receive)
+                    content = msg.data().decode("utf-8")
+                    await anyio.to_thread.run_sync(consumer.acknowledge, msg)
+                    await self._shared_queue.put(Event(channel=channel, message=content))
+                    logger.info(f"Received message from channel {channel}: {content}")
                 except Exception as e:
                     logger.error(f"Error receiving message from channel {channel}: {e}")
         except asyncio.CancelledError:
             logger.info(f"Receiver for channel {channel} was cancelled")
         finally:
-            await self._close_consumer(consumer)
+            await anyio.to_thread.run_sync(consumer.close)

@@ -26,17 +26,17 @@ async def test_redis():
 """
 
 
-
 @pytest.mark.asyncio
 async def test_pulsar():
     async with Broadcast("pulsar://localhost:6650") as broadcast:
         async with broadcast.subscribe("chatroom") as subscriber:
-            await asyncio.sleep(2)  # Increased wait time
+            await asyncio.sleep(2)  # Increase this value
             await broadcast.publish("chatroom", "hello")
-            await asyncio.sleep(2)  # Increased wait time
-            event = await asyncio.wait_for(subscriber.get(), timeout=5)  # Added timeout
+            await asyncio.sleep(2)  # Add an additional wait here
+            event = await subscriber.get()
             assert event.channel == "chatroom"
             assert event.message == "hello"
+
 
 
 """
