@@ -41,6 +41,17 @@ async def test_pulsar():
 
 """
 @pytest.mark.asyncio
+async def test_pulsar():
+    async with Broadcast("pulsar://localhost:6650") as broadcast:
+        async with broadcast.subscribe("chatroom") as subscriber:
+            await asyncio.sleep(1)
+            await broadcast.publish("chatroom", "hello")
+            await asyncio.sleep(1)
+            event = await subscriber.get()
+            assert event.channel == "chatroom"
+            assert event.message == "hello"
+
+@pytest.mark.asyncio
 async def test_postgres():
     async with Broadcast(
         "postgres://postgres:postgres@localhost:5432/broadcaster"
